@@ -1,0 +1,4 @@
+- accept python datetime as value to cells
+- implement cellrange setting and getting
+- improv documentation on wrapper classes
+- setup.py file that generates the .oxt libreoffice/openoffice extension

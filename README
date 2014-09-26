@@ -6,3 +6,34 @@ GLIBREPILOT is an LibreOffice/OpenOffice extension project
 which aims to allow one to easily script Spreadsheets with Python,
 by embedding Python scripts into the spreadsheets themselves
 
+
+The contents of tha package should be zipped in a file with
+the "oxt" extension - that file is then installed as a LibreOffice Extension
+using the "tools->extension manager" option.
+
+At this point, two new formulae will be available in libreoffice calc:
+    "pyeval"  which can receive a string and evaluate a single Python expression
+    and "pyexec"  - which evaluates a string as  a python program -
+NB: one can't format line breaks inside formula cells, so it is not
+possible to create a multi-line script inside the "pyexec" formula -
+it should instead refer to another text cell containing the script.
+
+
+For the script, one can use all normal UNO Api's, but there is
+a SpreadSheet object wrapped in an "S" global variable, which
+points to the current spreadsheet in a more pythonic way than
+the UNO Apis -
+for example, using
+
+S[0]["B2"] = "some text"
+
+will set "some text" as the text in the B2 cell on the first Sheet of
+the current document. Sheets can be indexed with a pair of numbers -
+so S[0]["a1"] and S[0][0,0]  both refer to the same cell.
+
+Python snippets in a cell can import and use any module available
+for the Python3 install in use by LibreOffice - on Linux systems,
+that is usually all system-wide packages. Under Windows one should make
+intended packages available to the Python install that comes along
+LibreOffice/OpenOffice
+

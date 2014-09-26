@@ -3,6 +3,10 @@ from org.openoffice.addin import XPyEval
 from com.sun.star.sheet import XAddIn
 from com.sun.star.lang import XLocalizable, XServiceName, Locale
 
+
+
+###############
+
 #from pyextension_helper import ExtensionBase
 
 class ExtensionBase(unohelper.Base, XPyEval, XAddIn, XServiceName):
@@ -47,7 +51,6 @@ class ExtensionBase(unohelper.Base, XPyEval, XAddIn, XServiceName):
     #def pyeval( self, str ):
         #return eval(str)
 
-result = ""
 
 
 class PyEval(ExtensionBase):
@@ -59,9 +62,8 @@ class PyEval(ExtensionBase):
     def pyeval(self, formula):
         return eval(formula)
 
-    def pyexec(self, str):
-        global result
-
+    def pyexec(self, formula):
+        result = ""
         desktop = self.ctx.ServiceManager.createInstanceWithContext(
             'com.sun.star.frame.Desktop', self.ctx)
 
@@ -69,8 +71,7 @@ class PyEval(ExtensionBase):
         model = desktop.getCurrentComponent()
 
         # access the document:
-        sheets = model.Sheets
-        s1  = sh.Sheet1
+        spreadsheet = S = SpreadSheet(model.Sheets)
 
         exec(formula, globals(), locals())
         return result
@@ -85,6 +86,21 @@ class Cell(object):
 
     def setFormula(self, value):
         self._cell.setFormula(value)
+
+    def _set_color(self, color=None):
+        if color is None:
+            color = -1
+        else:
+            color = (color[0] << 16) + (color[1] << 8) + color[2]
+        self._cell.CellBackColor = color
+
+    def _get_color(self):
+        color = self._cell.CellBackColor
+        if color == -1:
+            return None
+        return (color >> 16, color >> 8 & 0xff, color &0xff)
+
+    backcolor = property(_get_color, _set_color)
 
 class CellArray(object):
     pass
@@ -138,3 +154,21 @@ class SpreadSheet(object):
     def __repr__(self):
         return "Spreadsheet({})".format(", ".join("'{}'".format(sh.name)
                                         for sh in self.sheets))
+
+#########
+# For external use of L.O.:
+
+def connect():
+    import uno
+
+    localContext = uno.getComponentContext()
+    resolver = localContext.ServiceManager.createInstanceWithContext(
+                                    "com.sun.star.bridge.UnoUrlResolver", localContext )
+    ctx = resolver.resolve( "uno:socket,host=localhost,port=2002;urp;StarOffice.ComponentContext" )
+    smgr = ctx.ServiceManager
+    desktop = smgr.createInstanceWithContext( "com.sun.star.frame.Desktop",ctx)
+
+
+    # get current document model
+    model = desktop.getCurrentComponent()
+    return SpreadSheet(model.Sheets)
