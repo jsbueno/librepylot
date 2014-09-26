@@ -1,0 +1,8 @@
+===============
+g libre pilot
+===============
+
+GLIBREPILOT is an LibreOffice/OpenOffice extension project
+which aims to allow one to easily script Spreadsheets with Python,
+by embedding Python scripts into the spreadsheets themselves
+
