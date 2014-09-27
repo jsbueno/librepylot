@@ -1,9 +1,13 @@
+# coding: utf-8
+
+from datetime import date, datetime, timedelta
 import unohelper
 from org.openoffice.addin import XPyEval
 from com.sun.star.sheet import XAddIn
 from com.sun.star.lang import XLocalizable, XServiceName, Locale
 
 
+date_formats = {30, 32, 33, 34, 35, 36,37, 38, 39, 82, 83, 84}
 
 ###############
 
@@ -82,10 +86,23 @@ class Cell(object):
         self.address = address
 
     def __repr__(self):
-        return "Cell {} - {}".format(self.address, self._cell.getFormula())
+        return "Cell {} - {}".format(self.address, self.formula)
 
     def setFormula(self, value):
+        if isinstance(value, (datetime, date)):
+            value = date_to_number(value)
+            if self._cell.NumberFormat not in date_formats:
+                # ISO yyyy-mm-dd format:
+                self._cell.NumberFormat = 84
         self._cell.setFormula(value)
+
+    def getFormula(self):
+        value = self._cell.getFormula()
+        if self._cell.NumberFormat in date_formats:
+            return number_to_date(int(value))
+        return value
+
+    formula = property(getFormula, setFormula)
 
     def _set_color(self, color=None):
         if color is None:
@@ -124,7 +141,7 @@ class Sheet(object):
 
     def __setitem__(self, name_or_address, value):
         cell = self.__getitem__(name_or_address)
-        cell.setFormula(value)
+        cell.formula = value
 
     name = property(lambda s:s._sheet.getName())
 
@@ -159,6 +176,11 @@ class SpreadSheet(object):
 # For external use of L.O.:
 
 def connect():
+    """
+    Start LibreOffice with
+    libreoffice -calc -accept="socket,host=localhost,port=2002;urp;StarOffice.ServiceManager"
+    and call this from a Python interactive console
+    """
     import uno
 
     localContext = uno.getComponentContext()
@@ -172,3 +194,15 @@ def connect():
     # get current document model
     model = desktop.getCurrentComponent()
     return SpreadSheet(model.Sheets)
+
+# Convert between sequential numbers since 1900-1-1 and Python datetime
+# taking into account excel's 1900 Saint Tiby's bug:
+
+def number_to_date(value):
+    return datetime(1900, 1, 1) + timedelta(value - 2)
+
+def date_to_number(date_value):
+    if isinstance(date_value, date):
+        date_value = datetime(date_value.year, date_value.month, date_value.day)
+    # TODO: add proper accounting to actually take time into account
+    return  (date_value - datetime(1900,1,1)).days + 2
