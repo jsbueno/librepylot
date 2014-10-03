@@ -96,13 +96,18 @@ class Cell(object):
                 self._cell.NumberFormat = 84
         self._cell.setFormula(value)
 
-    def getFormula(self):
-        value = self._cell.getFormula()
+    def getFormula(self, value=False):
+        if value:
+            value = self._cell.getValue()
+        else:
+            value = self._cell.getFormula()
         if self._cell.NumberFormat in date_formats:
             return number_to_date(int(value))
         return value
 
-    formula = property(getFormula, setFormula)
+    formula = property(getFormula, setFormula, lambda s: s.setFormula(""))
+    value = property(lambda s: s.getFormula(True), setFormula,
+                     lambda s: s.setFormula(""))
 
     def _set_color(self, color=None):
         if color is None:
@@ -117,10 +122,52 @@ class Cell(object):
             return None
         return (color >> 16, color >> 8 & 0xff, color &0xff)
 
-    backcolor = property(_get_color, _set_color)
+    backcolor = back_color = property(_get_color, _set_color)
+
 
 class CellArray(object):
     pass
+
+
+class Line(object):
+    def __init__(self, line, direction, address=None):
+        self.line = line
+        self.address = address
+        self.direction = direction
+
+    def __getitem__(self, index):
+        args = (index, 0) if self.direction == "Rows" else (0, index)
+        # TODO: calculate cell addresss
+        return Cell(self.line.getCellByPosition(*args))
+
+    def __setitem__(self, index, value):
+        self.__getitem__(index).formula = value
+
+    visible = property(lambda s:getattr(s.line, "IsVisible"),
+                       lambda s, v: setattr(s.line, "IsVisible", v))
+
+
+class LineContainer(object):
+    def __init__(self, sheet,direction):
+        self.sheet = sheet
+        self.direction = direction
+        self.lines = getattr(self.sheet._sheet, direction)
+
+    def __getitem__(self, index):
+        if isinstance(index, str):
+            return Line(self.lines.getByName(index), self.direction, index)
+        return Line(self.lines.getByIndex(index), self.direction, index)
+
+
+class LineProperty(object):
+    def __init__(self, direction):
+        self.direction = direction
+
+    def __get__(self, instance, owner):
+        if not instance:
+            return self
+        return LineContainer(instance, self.direction)
+
 
 class Sheet(object):
     def __init__(self, uno_sheet, parent=None):
@@ -143,6 +190,9 @@ class Sheet(object):
         cell = self.__getitem__(name_or_address)
         cell.formula = value
 
+    rows = Rows = LineProperty("Rows")
+    cols = columns = Columns = LineProperty("Columns")
+
     name = property(lambda s:s._sheet.getName())
 
 
@@ -150,10 +200,13 @@ class Sheet(object):
 class SpreadSheet(object):
     def __init__(self, sheets):
         self._sheets = sheets
+        self.update()
+
+    def update(self):
         self.sheets = []
         self.sheets_by_name = {}
         for sheet in self.enumerate_sheets():
-            sh = Sheet(sheet, sheets)
+            sh = Sheet(sheet, self._sheets)
             self.sheets.append(sh)
             self.sheets_by_name[sh.name] = sh
 
@@ -167,6 +220,9 @@ class SpreadSheet(object):
         if isinstance(index, str):
             return self.sheets_by_name[index]
         return self.sheets[index]
+
+    def __len__(self):
+        return len(self.sheets)
 
     def __repr__(self):
         return "Spreadsheet({})".format(", ".join("'{}'".format(sh.name)
