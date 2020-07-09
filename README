@@ -39,6 +39,14 @@ LibreOffice/OpenOffice
 
 INSTALL
 ========
-TBD - but basically, zip all contents in a file
-with an "oxt" extension and add it as a libreOffice extension
-using "tools->manage extensions"
+Download the OXT file available at https://github.com/jsbueno/librepylot/releases/latest ,
+inside LibreOffice Calc, use `tools->Manage Extensions->Add`, select the file, and
+restart L.O. . The two new formulas will be available.
+
+It is also important to disable smart-quote substitution while trying to 
+tyoe _any_ Python code (`Tools->AutoCorrect->Localized Options`, uncheck 
+"Single Quotes" and "Double Quotes".
+
+If you want to fiddle with the code, or install a development version,
+to create the OXT file, just zip all contents in a file
+with an "oxt" extension and add it as a libreOffice extension as described above.
